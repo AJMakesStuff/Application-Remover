@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Application Remover
+Comment=View and uninstall installed packages
+Exec=application-remover
+Icon=application-remover
+Terminal=false
+Categories=System;PackageManager;
+Keywords=uninstall;remove;packages;deb;

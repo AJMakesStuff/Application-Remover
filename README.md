@@ -30,6 +30,8 @@ Cargo generates the `application-remover` executable at `target/release/applicat
 
 The generated executable starts the GTK frontend by default and uses itself in backend mode for package operations. Set `APPLICATION_REMOVER_PYTHON` if the Python interpreter with PyGObject is not named `python3`.
 
+Tagged GitHub releases publish `.deb`, `.rpm`, and `.AppImage` packages for Linux x86_64 and ARM64. The `.deb` and `.rpm` packages declare the GTK, Python GI, and PolicyKit runtime dependencies. The AppImages include the application files but use the system's Python, PyGObject, GTK 4, and libadwaita libraries, so those must be installed on the system. Debian package-management operations require `apt`/`dpkg`; Fedora-family systems can use the app for Flatpak and Snap packages.
+
 ## Removal behavior
 
 Essential and protected packages cannot be removed. Debian removal plans are simulated with APT, including dependencies that become unused because of the selected removal. The Rust backend checks the plan again immediately before execution and stops if it changed. APT performs its own final safety checks. Administrator authorization uses PolicyKit; run the app as your normal user.

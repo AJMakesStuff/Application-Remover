@@ -3,10 +3,54 @@ name = "application-remover"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
-description = "Rust package-management backend for Application Remover"
+description = "Linux application manager with a GTK interface and Rust package backend"
+license = "NOASSERTION"
 
 [dependencies]
 flate2 = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 wait-timeout = "0.2"
+
+[package.metadata.deb]
+name = "application-remover"
+section = "utils"
+priority = "optional"
+depends = [
+    "$auto",
+    "python3",
+    "python3-gi",
+    "gir1.2-gtk-4.0",
+    "gir1.2-adw-1",
+    "policykit-1",
+    "apt",
+]
+recommends = ["flatpak", "snapd"]
+assets = [
+    ["target/release/application-remover", "usr/bin/", "755"],
+    ["application_remover/*.py", "usr/lib/application-remover/application_remover/", "644"],
+    ["packaging/io.github.applicationremover.App.desktop", "usr/share/applications/", "644"],
+    ["packaging/application-remover.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+    ["README.md", "usr/share/doc/application-remover/README.md", "644"],
+]
+
+[package.metadata.generate-rpm]
+name = "application-remover"
+assets = [
+    { source = "target/release/application-remover", dest = "/usr/bin/application-remover", mode = "755" },
+    { source = "application_remover/*.py", dest = "/usr/lib/application-remover/application_remover/", mode = "644" },
+    { source = "packaging/io.github.applicationremover.App.desktop", dest = "/usr/share/applications/io.github.applicationremover.App.desktop", mode = "644" },
+    { source = "packaging/application-remover.svg", dest = "/usr/share/icons/hicolor/scalable/apps/application-remover.svg", mode = "644" },
+    { source = "README.md", dest = "/usr/share/doc/application-remover/README.md", mode = "644" },
+]
+
+[package.metadata.generate-rpm.requires]
+python3 = "*"
+python3-gobject = "*"
+gtk4 = "*"
+libadwaita = "*"
+polkit = "*"
+
+[package.metadata.generate-rpm.recommends]
+flatpak = "*"
+snapd = "*"

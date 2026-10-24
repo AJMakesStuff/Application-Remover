@@ -1,0 +1,120 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.artifact }} packages
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            artifact: linux-x64
+            appimage_arch: x86_64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            artifact: linux-arm64
+            appimage_arch: aarch64
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release executable
+        run: cargo build --locked --release --target ${{ matrix.target }}
+
+      - name: Install Debian and RPM packagers
+        run: |
+          cargo install cargo-deb --version 3.7.0 --locked
+          cargo install cargo-generate-rpm --version 0.21.0 --locked
+
+      - name: Build Debian and RPM packages
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          ARTIFACT: ${{ matrix.artifact }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cargo deb --no-build --target "$TARGET" --output "dist/application-remover-${ARTIFACT}.deb"
+          cargo generate-rpm --target "$TARGET" --output "dist/application-remover-${ARTIFACT}.rpm"
+
+      - name: Build AppImage
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          APPIMAGE_ARCH: ${{ matrix.appimage_arch }}
+          ARTIFACT: ${{ matrix.artifact }}
+        run: |
+          set -euo pipefail
+          appdir="$GITHUB_WORKSPACE/AppDir"
+          mkdir -p \
+            "$appdir/usr/bin" \
+            "$appdir/usr/lib/application-remover/application_remover" \
+            "$appdir/usr/share/applications" \
+            "$appdir/usr/share/icons/hicolor/scalable/apps" \
+            "$appdir/usr/share/doc/application-remover"
+          cp "target/${TARGET}/release/application-remover" "$appdir/usr/bin/"
+          cp application_remover/*.py "$appdir/usr/lib/application-remover/application_remover/"
+          cp README.md "$appdir/usr/share/doc/application-remover/"
+          cp packaging/io.github.applicationremover.App.desktop "$appdir/"
+          cp packaging/application-remover.svg "$appdir/application-remover.svg"
+          cp packaging/application-remover.svg \
+            "$appdir/usr/share/icons/hicolor/scalable/apps/application-remover.svg"
+          cp packaging/AppRun "$appdir/AppRun"
+          chmod +x "$appdir/AppRun"
+
+          appimagetool="$RUNNER_TEMP/appimagetool-${APPIMAGE_ARCH}.AppImage"
+          curl --fail --location --retry 3 \
+            "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-${APPIMAGE_ARCH}.AppImage" \
+            --output "$appimagetool"
+          chmod +x "$appimagetool"
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH="$APPIMAGE_ARCH" \
+            "$appimagetool" \
+            "$appdir" "$GITHUB_WORKSPACE/dist/application-remover-${ARTIFACT}.AppImage"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: application-remover-${{ matrix.artifact }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.AppImage
