@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Linux Application Remover
+GenericName=Programs and Features
+Comment=Uninstall or change a program
+Exec=linux-application-remover
+Icon=io.github.linux_application_remover
+Terminal=false
+Categories=System;PackageManager;GTK;
+Keywords=uninstall;remove;programs;features;applications;packages;apt;dnf;pacman;flatpak;snap;
+StartupNotify=true

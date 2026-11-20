@@ -1,0 +1,47 @@
+# Flatpak manifest. See docs/PACKAGING.md ("Flatpak") for the host-integration
+# trade-offs: a sandboxed app cannot uninstall host packages by itself, so this
+# manifest asks for the permission to run commands on the host through
+# flatpak-spawn, which is effectively full host access. Flathub is unlikely to
+# accept it; it is meant for self-hosted/side-loaded bundles.
+app-id: io.github.linux_application_remover
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: linux-application-remover
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Run package managers and pkexec on the host (flatpak-spawn --host).
+  - --talk-name=org.freedesktop.Flatpak
+  # Read the host's desktop entries and package databases.
+  - --filesystem=host-os:ro
+  - --filesystem=/var/lib/dpkg:ro
+  - --filesystem=/var/lib/apt:ro
+  - --filesystem=/var/lib/pacman:ro
+  - --filesystem=/var/lib/flatpak:ro
+  - --filesystem=xdg-data/flatpak:ro
+  - --filesystem=/var/lib/snapd/desktop:ro
+  - --filesystem=/run/snapd.socket
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/linux-application-remover/cargo
+modules:
+  - name: linux-application-remover
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network   # download crates; use flatpak-cargo-generator for offline builds
+    build-commands:
+      - cargo build --release
+      - install -Dm755 target/release/linux-application-remover /app/bin/linux-application-remover
+      - install -Dm644 packaging/io.github.linux_application_remover.desktop /app/share/applications/io.github.linux_application_remover.desktop
+      - install -Dm644 packaging/io.github.linux_application_remover.metainfo.xml /app/share/metainfo/io.github.linux_application_remover.metainfo.xml
+      - install -Dm644 packaging/icons/io.github.linux_application_remover.svg /app/share/icons/hicolor/scalable/apps/io.github.linux_application_remover.svg
+    sources:
+      - type: dir
+        path: ../..

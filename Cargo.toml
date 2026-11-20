@@ -1,0 +1,70 @@
+[package]
+name = "linux-application-remover"
+<<<<<<< HEAD
+version = "0.0.2"
+=======
+version = "0.0.1"
+>>>>>>> 61e21e1 (Various)
+edition = "2021"
+rust-version = "1.80"
+description = "A Programs and Features style application remover for Linux"
+license = "GPL-3.0-or-later"
+readme = "README.md"
+repository = "https://github.com/linux-application-remover/linux-application-remover"
+authors = ["Linux Application Remover contributors"]
+
+[lib]
+name = "lar"
+path = "src/lib.rs"
+
+[[bin]]
+name = "linux-application-remover"
+path = "src/main.rs"
+required-features = ["gui"]
+
+[dependencies]
+adw = { version = "0.9", package = "libadwaita", features = ["v1_5"], optional = true }
+gtk = { version = "0.11", package = "gtk4", features = ["v4_12"], optional = true }
+async-channel = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[features]
+default = ["gui"]
+# Build the GTK4/libadwaita interface. Disable to build/test only the core logic.
+gui = ["dep:gtk", "dep:adw"]
+
+[profile.release]
+lto = "thin"
+strip = true
+codegen-units = 4
+
+# ---- .deb packaging (cargo install cargo-deb && cargo deb) ----
+[package.metadata.deb]
+name = "linux-application-remover"
+section = "utils"
+priority = "optional"
+maintainer = "Linux Application Remover contributors <noreply@example.com>"
+depends = "$auto, libgtk-4-1 (>= 4.10), libadwaita-1-0 (>= 1.5), policykit-1 | pkexec"
+extended-description = "Programs and Features style GUI to find and uninstall applications installed through APT, DNF, Pacman, Zypper, Flatpak and Snap."
+assets = [
+    ["target/release/linux-application-remover", "usr/bin/", "755"],
+    ["packaging/io.github.linux_application_remover.desktop", "usr/share/applications/", "644"],
+    ["packaging/io.github.linux_application_remover.metainfo.xml", "usr/share/metainfo/", "644"],
+    ["packaging/icons/io.github.linux_application_remover.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+    ["README.md", "usr/share/doc/linux-application-remover/README.md", "644"],
+]
+
+# ---- .rpm packaging (cargo install cargo-generate-rpm && cargo generate-rpm) ----
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/linux-application-remover", dest = "/usr/bin/linux-application-remover", mode = "755" },
+    { source = "packaging/io.github.linux_application_remover.desktop", dest = "/usr/share/applications/io.github.linux_application_remover.desktop", mode = "644" },
+    { source = "packaging/io.github.linux_application_remover.metainfo.xml", dest = "/usr/share/metainfo/io.github.linux_application_remover.metainfo.xml", mode = "644" },
+    { source = "packaging/icons/io.github.linux_application_remover.svg", dest = "/usr/share/icons/hicolor/scalable/apps/io.github.linux_application_remover.svg", mode = "644" },
+]
+[package.metadata.generate-rpm.requires]
+gtk4 = ">= 4.10"
+libadwaita = ">= 1.5"
+polkit = "*"

@@ -1,0 +1,113 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  VERSION: ${{ github.ref_name }}
+
+jobs:
+  deb-appimage:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev librsvg2-dev pkg-config patchelf file wget desktop-file-utils appstream
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Validate metadata
+        run: |
+          desktop-file-validate packaging/io.github.linux_application_remover.desktop
+          appstreamcli validate --no-net packaging/io.github.linux_application_remover.metainfo.xml
+      - name: Build .deb
+        run: |
+          cargo install cargo-deb --locked
+          cargo build --release
+          cargo deb --no-build
+          mkdir -p dist
+          cp target/debian/*.deb dist/
+      - name: Build AppImage
+        run: VERSION="${VERSION#v}" ARCH=${{ matrix.arch }} packaging/appimage/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-appimage-${{ matrix.arch }}
+          path: dist/*
+
+  rpm:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.os }}
+    container: fedora:latest
+    steps:
+      - name: Dependencies
+        run: dnf install -y cargo gcc gtk4-devel libadwaita-devel pkgconf-pkg-config git rpm-build
+      - uses: actions/checkout@v4
+      - run: |
+          cargo install cargo-generate-rpm --locked
+          cargo build --release
+          cargo generate-rpm
+          mkdir -p dist && cp target/generate-rpm/*.rpm dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.arch }}
+          path: dist/*
+
+  flatpak:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Build bundle
+        run: |
+          flatpak-builder --user --force-clean --install-deps-from=flathub --repo=repo build-dir packaging/flatpak/io.github.linux_application_remover.yml
+          mkdir -p dist
+          flatpak build-bundle repo dist/linux-application-remover-${{ matrix.arch }}.flatpak io.github.linux_application_remover
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-${{ matrix.arch }}
+          path: dist/*
+
+  publish:
+    needs: [deb-appimage, rpm, flatpak]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/*
+          generate_release_notes: true

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.linux_application_remover</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Linux Application Remover</name>
+  <developer id="io.github.linux_application_remover">
+    <name>Linux Application Remover contributors</name>
+  </developer>
+  <summary>Uninstall or change a program, Programs and Features style</summary>
+  <description>
+    <p>
+      Linux Application Remover shows the applications installed on your computer in a compact,
+      sortable table, much like Programs and Features on Windows, and lets you uninstall them.
+    </p>
+    <p>
+      It detects software installed through APT, DNF, Pacman, Zypper, Flatpak and Snap, hides
+      libraries and other system packages by default, previews exactly what a removal will change,
+      and asks for administrator rights only when the package manager needs them.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.linux_application_remover.desktop</launchable>
+  <provides>
+    <binary>linux-application-remover</binary>
+  </provides>
+  <url type="homepage">https://github.com/linux-application-remover/linux-application-remover</url>
+  <url type="bugtracker">https://github.com/linux-application-remover/linux-application-remover/issues</url>
+  <categories>
+    <category>System</category>
+  </categories>
+  <requires>
+    <display_length compare="ge">600</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-20">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>
